@@ -1,0 +1,84 @@
+
+
+/* Contenitore domanda e pulsante */
+.soc-chat .soc-chat__form {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    flex-wrap: nowrap !important;
+    gap: 12px !important;
+    width: 100% !important;
+    border-top: 1px solid #e5e9ef;
+    padding-top: 16px;
+    box-sizing: border-box;
+}
+
+/* Campo di inserimento domanda */
+.soc-chat .soc-chat__form input.soc-chat__question {
+    display: block !important;
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 54px !important;
+    min-height: 54px !important;
+    padding: 12px 16px !important;
+    margin: 0 !important;
+
+    background: #ffffff !important;
+    color: #1c2936 !important;
+    border: 2px solid #aab9ca !important;
+    border-radius: 10px !important;
+
+    font-family: inherit !important;
+    font-size: 16px !important;
+    line-height: 1.4 !important;
+    box-sizing: border-box !important;
+    box-shadow: none !important;
+}
+
+/* Testo segnaposto */
+.soc-chat .soc-chat__question::placeholder {
+    color: #697989 !important;
+    opacity: 1 !important;
+}
+
+/* Evidenzia il campo quando selezionato */
+.soc-chat .soc-chat__question:focus {
+    outline: none !important;
+    border-color: #134b78 !important;
+    box-shadow: 0 0 0 3px rgba(19,75,120,.15) !important;
+}
+
+/* Pulsante di invio */
+.soc-chat .soc-chat__form button[type="submit"] {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 100px !important;
+    height: 54px !important;
+    padding: 0 22px !important;
+    margin: 0 !important;
+
+    background: #134b78 !important;
+    color: #ffffff !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    box-sizing: border-box !important;
+}
+
+/* Smartphone */
+@media (max-width: 500px) {
+    .soc-chat .soc-chat__form {
+        gap: 8px !important;
+    }
+
+    .soc-chat .soc-chat__form button[type="submit"] {
+        min-width: 72px !important;
+        padding: 0 12px !important;
+    }
+}
