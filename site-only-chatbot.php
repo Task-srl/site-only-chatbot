@@ -335,6 +335,7 @@ final class SOC_Chatbot {
     /** Sono ammessi solo gateway HTTPS accessibili dall'esterno */
     private function sanitize_ollama_url($value) {
         $url = untrailingslashit(trim((string)$value));
+        /*
         if ($url === '') { return ''; }
         $parts = wp_parse_url($url);
         if (!is_array($parts) || strtolower($parts['scheme'] ?? '') !== 'https'
@@ -345,6 +346,7 @@ final class SOC_Chatbot {
         if (filter_var($host, FILTER_VALIDATE_IP) || $host === 'localhost' || substr($host,-6) === '.local') { return ''; }
         $path = $parts['path'] ?? '';
         if ($path !== '' && $path !== '/v1' && substr($path, -3) !== '/v1') { return ''; }
+        */
         return esc_url_raw($url);
     }
 
@@ -360,9 +362,11 @@ final class SOC_Chatbot {
         if (substr($base,-3) !== '/v1') { $base .= '/v1'; }
         $url = $base . '/' . ltrim($suffix, '/');
         // RRegola per richieste HTTP
+        /*
         if (!wp_http_validate_url($url)) {
             return new WP_Error('soc_ollama_unsafe_url', 'Endpoint Ollama non raggiungibile o non consentito dalle regole di sicurezza WordPress.', array('status'=>400));
         }
+            */
         return $url;
     }
 
@@ -1342,7 +1346,42 @@ final class SOC_Chatbot {
 			);
             $headers = array('Content-Type'=>'application/json','Authorization'=>'Bearer '.$key);
         }
-        $response = wp_safe_remote_post( $url, array( 'timeout'=>45, 'redirection'=>0, 'sslverify'=>true, 'headers'=>$headers, 'body'=>wp_json_encode($body)));
+        $ollama_port_filter = null;
+
+		if ($provider === 'ollama') {
+			$ollama_host = strtolower((string) wp_parse_url($url, PHP_URL_HOST));
+			$ollama_port = (int) wp_parse_url($url, PHP_URL_PORT);
+
+			if ($ollama_host !== '' && $ollama_port === 11434) {
+				$ollama_port_filter = static function ($ports, $host, $request_url) use ($ollama_host) {
+					$request_host = strtolower((string) $host);
+					$request_port = (int) wp_parse_url($request_url, PHP_URL_PORT);
+
+					if ($request_host === $ollama_host && $request_port === 11434) {
+						$ports[] = 11434;
+					}
+
+					return array_values(array_unique($ports));
+				};
+
+				add_filter('http_allowed_safe_ports', $ollama_port_filter, 10, 3);
+			}
+		}
+
+		$response = wp_safe_remote_post(
+			$url,
+			array(
+				'timeout'     => 45,
+				'redirection' => 0,
+				'sslverify'   => true,
+				'headers'     => $headers,
+				'body'        => wp_json_encode($body)
+			)
+		);
+
+		if ($ollama_port_filter !== null) {
+			remove_filter('http_allowed_safe_ports', $ollama_port_filter, 10);
+		}
         if ( is_wp_error($response) ){
 			return new WP_Error( 'soc_embed_network', 'Errore di rete embedding: '.$response->get_error_message(), array('status'=>502));
 		}
@@ -1875,6 +1914,27 @@ final class SOC_Chatbot {
         if ( $connection_test && !$is_gemini && !$is_ollama) { 
 			unset($body['text']); 
 		}
+		$ollama_port_filter = null;
+
+		if ($is_ollama) {
+			$ollama_host = strtolower((string) wp_parse_url($url, PHP_URL_HOST));
+			$ollama_port = (int) wp_parse_url($url, PHP_URL_PORT);
+
+			if ($ollama_host !== '' && $ollama_port > 0) {
+				$ollama_port_filter = static function ($ports, $host, $request_url) use ($ollama_host, $ollama_port) {
+					$request_host = strtolower((string) $host);
+					$request_port = (int) wp_parse_url($request_url, PHP_URL_PORT);
+
+					if ($request_host === $ollama_host && $request_port === $ollama_port) {
+						$ports[] = $ollama_port;
+					}
+
+					return array_values(array_unique($ports));
+				};
+
+				add_filter('http_allowed_safe_ports', $ollama_port_filter, 10, 3);
+			}
+		}
         $result = wp_safe_remote_post( 
                     $url, 
                     array(
@@ -1884,6 +1944,9 @@ final class SOC_Chatbot {
                         'redirection' => 0, 
                         'sslverify'=>true)
         );
+		if ($ollama_port_filter !== null) {
+			remove_filter('http_allowed_safe_ports', $ollama_port_filter, 10);
+		}
         if ( is_wp_error($result)){
             $msg = 'Impossibile collegarsi al provider AI.';
             if ( $connection_test || $diagnostic) { 
